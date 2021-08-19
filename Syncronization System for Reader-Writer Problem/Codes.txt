@@ -1,0 +1,114 @@
+package sync;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+
+
+public class Test {
+	public static void main(String [] args) {
+		ExecutorService executorService = Executors.newCachedThreadPool();
+		ReadWriteLock RW = new ReadWriteLock();
+		
+		
+		executorService.execute(new Writer(RW));
+		executorService.execute(new Writer(RW));
+		executorService.execute(new Writer(RW));
+		executorService.execute(new Writer(RW));
+		
+		executorService.execute(new Reader(RW));
+		executorService.execute(new Reader(RW));
+		executorService.execute(new Reader(RW));
+		executorService.execute(new Reader(RW));
+		
+		
+	}
+}
+
+
+class ReadWriteLock{
+	private Semaphore readerSemaphore = new Semaphore(1);
+        private Semaphore writerSemaphore = new Semaphore(1);
+
+	// we need to keep number of readers 
+        // to actually control if there is any active reader
+        int Readers = 0;
+       
+	public void readLock() throws InterruptedException { 
+            //here we try to get permit and if there is no permit available we release writer
+            readerSemaphore.acquire();
+            if(Readers == 0){
+                writerSemaphore.acquire();
+            }
+            Readers++;
+            readerSemaphore.release();
+		
+	}
+	public void writeLock() throws InterruptedException {
+            //here we try to get permit for the writer to enter critical session
+        writerSemaphore.acquire();
+        }
+	public void readUnLock() throws InterruptedException {
+            // here we check first if any reader left and then if there is no reader we release writer again
+            readerSemaphore.acquire();
+            Readers--;
+             if(Readers == 0){
+                writerSemaphore.release();
+            }
+            readerSemaphore.release();
+		
+	}
+	public void writeUnLock() {
+		
+            writerSemaphore.release();
+		
+	}
+
+}
+
+
+
+
+class Writer implements Runnable
+{
+   private ReadWriteLock RW_lock;
+   
+
+    public Writer(ReadWriteLock rw) {
+    	RW_lock = rw;
+   }
+
+    public void run() {
+      while (true){
+    	  RW_lock.writeLock();
+    	
+    	  RW_lock.writeUnLock();
+       
+      }
+   }
+
+
+}
+
+
+
+class Reader implements Runnable
+{
+   private ReadWriteLock RW_lock;
+   
+
+   public Reader(ReadWriteLock rw) {
+    	RW_lock = rw;
+   }
+    public void run()  {
+      while (true){ 	    	  
+    	  RW_lock.readLock();
+    	 
+    	  
+    	  RW_lock.readUnLock();
+       
+      }
+   }
+
+
+}
